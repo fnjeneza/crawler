@@ -8,18 +8,28 @@
 # 4.	Boucle.
 #	base >=1000 pages(URI)
 
-from http import client
-from html import parser
+from urllib.request import urlopen
+from html.parser import HTMLParser
+
+class htmlAnalyzer(HTMLParser):
+    def handle_starttag(self, tag, attrs):
+        """ Recherche des liens """
+        
+        if(tag == "a"):
+            for attr in attrs:
+                if(attr[0] == "href"):
+                    href = attr[1];
+                    if(href.find("http")>=0):
+                        print(href);
 
 
 
-def crawler(url_):
-	print(url_)
-	conn  = client.HTTPConnection(url_);
-	conn.request("GET", "/")
-	response = conn.getresponse()
-	print(response)
+url = "http://www.planet-libre.org";
 
-url = "www.planet-libre.fr";
-crawler(url);
+""" Retrieve an html page"""
+html = urlopen(url);
+
+analyzer = htmlAnalyzer();
+analyzer.feed(str(html.read()));
+
 
