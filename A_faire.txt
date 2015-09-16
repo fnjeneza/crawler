@@ -1,0 +1,20 @@
+
+Docs à rendre
+1.	Rapport
+2.	Code
+3.	URL
+
+** 20/09 à 23:59 mail [ADW] nom1 nom2
+A remettre le 25/10 à 23:59 par mail.
+
+Tâches:
+1. Crawl + Index avec au moins 1000 pages.
+2. Pertinence
+	Modèle vectoriel avec tf.idf
+	Cosinus de Salton
+3. Popularité
+	Page rank
+4. Classement
+
+Bonus => Mesure anti-webspam
+
