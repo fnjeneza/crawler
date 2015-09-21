@@ -82,5 +82,8 @@ while (analyzer.counter<1000):
 
     iterator+=1;
 
-
+#commit changes to the db
+analyzer.db.commit();
+analyzer.cursor.close();
+analyzer.db.close();
 print(analyzer.counter);
