@@ -46,6 +46,24 @@ class htmlAnalyzer(HTMLParser):
         self.cursor.execute("SELECT COUNT DISTINCT uri FROM crawl_tb");
         return self.cursor.fetchone()[0];
 
+    def tf(self, data):
+	#""" 
+	#calcul de la fréquence des mots 
+	#"""
+	#liste de mots
+	words_list = data.split(' ');
+
+	length = len(words_list);
+
+	#occurence des mots
+	words_occurence = {}
+
+	word = words_list[0];
+	if not words_occurence.__contains__(word):
+		words_occurence[word]=words_list.count(word)/length;
+
+	return words_occurence;
+
     def handle_starttag(self, tag, attrs):
         #Recherche des liens
         
@@ -59,10 +77,13 @@ class htmlAnalyzer(HTMLParser):
                         self.addUri(href);
 
 
-
+text="ceci est un text(, un vrai text";
 url = "http://www.planet-libre.org";
 analyzer = htmlAnalyzer();
 analyzer.addUri(url);
+
+analyszer.tf(text)
+break
 
 iterator=1;
 while (analyzer.counter<1000):
@@ -86,4 +107,4 @@ while (analyzer.counter<1000):
 analyzer.db.commit();
 analyzer.cursor.close();
 analyzer.db.close();
-print(analyzer.counter);
+#print(analyzer.counter);
