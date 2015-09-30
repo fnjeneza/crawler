@@ -29,11 +29,12 @@ class htmlAnalyzer(HTMLParser):
         self.cursor.execute("DROP TABLE IF ExISTS crawl_tb");
         self.cursor.execute('''CREATE TABLE crawl_tb (id integer primary key autoincrement,
                                                     uri text unique,
-                                                    stopwords text unique)''');
+                                                    stopword text unique)''');
         #init stopwords
         with open("stopwords.txt") as stopwords:
             for word in stopwords:
-                self.cursor.execute("INSERT INTO crawl_tb(stopwords) VALUES(?)",[word]);
+                word = word.strip()
+                self.cursor.execute("INSERT INTO crawl_tb(stopword) VALUES(?)",[word]);
         
         print("Init... OK")
         
@@ -54,13 +55,20 @@ class htmlAnalyzer(HTMLParser):
         self.cursor.execute("SELECT uri FROM crawl_tb WHERE id=?",[iterator]);
         return self.cursor.fetchone()[0];
         
-
+    
     def getTotal(self):
         """
         Total links in db
         """
         self.cursor.execute("SELECT COUNT DISTINCT uri FROM crawl_tb");
         return self.cursor.fetchone()[0];
+
+    def isStopword(self, word):
+        """
+        Check if "word" is a stopword
+        """
+        self.cursor.execute("SELECT stopword FROM crawl_tb WHERE stopword=?",[word])
+        return self.cursor.fetchone()[0]==word
 
     def tf(self, data):
         """ 
@@ -120,6 +128,8 @@ analyzer.addUri(url);
 ## Test
 #print(analyzer.remove_punctuations(text));
 #stopwords=[]
+print(analyzer.isStopword("much"))
+exit();
 text = analyzer.remove_punctuations(text);
 text = analyzer.stopwords(text)
 print(analyzer.tf(text))
