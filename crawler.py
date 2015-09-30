@@ -35,8 +35,6 @@ class htmlAnalyzer(HTMLParser):
             for word in stopwords:
                 self.cursor.execute("INSERT INTO crawl_tb(stopwords) VALUES(?)",[word]);
         
-        self.cursor.execute("select count(stopwords) from crawl_tb")
-        
         print("Init... OK")
         
     def addUri(self, uri):
@@ -64,9 +62,10 @@ class htmlAnalyzer(HTMLParser):
         self.cursor.execute("SELECT COUNT DISTINCT uri FROM crawl_tb");
         return self.cursor.fetchone()[0];
 
-    def tf(self, data):
+    def tf(self, data, stopwords=[]):
         """ 
         calcul de la fréquence des mots 
+        stopwords is a list of stopwords. Empty list if not given
         """
         #remove punctuations before process
         data = self.remove_punctuations(data);
@@ -79,11 +78,13 @@ class htmlAnalyzer(HTMLParser):
 
 	#occurence des mots
         words_occurence = {}
-
         
         for word in words_list:
-            if not words_occurence.__contains__(word):
-                words_occurence[word]=words_list.count(word)/length;
+            if word not in stopwords:
+                 #check if word is in stopwords
+                if not words_occurence.__contains__(word):
+                    #check if word is already in the list
+                    words_occurence[word]=words_list.count(word)/length;
 
         return words_occurence;
     
@@ -93,7 +94,7 @@ class htmlAnalyzer(HTMLParser):
         """
         punctuations = ['.',',',';',':','!','?','~'];
         for punctuation in punctuations:
-            text = text.replace(punctuation, '');   
+            text = text.replace(punctuation, '');
         return text;
 
     def handle_starttag(self, tag, attrs):
@@ -108,14 +109,14 @@ class htmlAnalyzer(HTMLParser):
                         #print(href);
                         self.addUri(href);
 
-text="ceci est un text, un vrai text";
+text="ceci est un text, un text";
 url = "http://www.planet-libre.org";
 analyzer = htmlAnalyzer();
 analyzer.addUri(url);
 
 ## Test
-print(analyzer.remove_punctuations(text));
-
+#print(analyzer.remove_punctuations(text));
+#stopwords=[]
 print(analyzer.tf(text))
 exit()
 ## End of test
