@@ -9,6 +9,8 @@ A remettre le 25/10 à 23:59 par mail.
 
 Tâches:
 1. Crawl + Index avec au moins 1000 pages.
+1.1 Gestion de robots.txt
+1.2 Analyse de la racine
 2. Pertinence
 	Modèle vectoriel avec tf.idf
 	Cosinus de Salton
@@ -18,3 +20,12 @@ Tâches:
 
 Bonus => Mesure anti-webspam
 
+Liste des stopwords en français
+http://www.ranks.nl/stopwords/french
+http://www.ranks.nl/stopwords
+
+TreeTagger
+http://www.cis.uni-muenchen.de/~schmid/tools/TreeTagger/
+TreeTagger wrapper pythonhttps://pypi.python.org/pypi/treetaggerwrapper/2.0.6
+
+** conversion de tab en espace
