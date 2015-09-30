@@ -68,7 +68,10 @@ class htmlAnalyzer(HTMLParser):
         Check if "word" is a stopword
         """
         self.cursor.execute("SELECT stopword FROM crawl_tb WHERE stopword=?",[word])
-        return self.cursor.fetchone()[0]==word
+        
+        if self.cursor.fetchone()==None:
+            return False;
+        return True;
 
     def tf(self, data):
         """ 
@@ -99,14 +102,16 @@ class htmlAnalyzer(HTMLParser):
             text = text.replace(punctuation, '');
         return text;
     
-    def stopwords(self,text, stopwords=[]):
+    def remove_stopwords(self,text):
         """
         Remove stopwords from text
         an empty list is given by default
         """
-        for word in stopwords:
-            text = text.replace(word,'');
-        return text;
+        words = text.split(' ');
+        for word in words:
+            if self.isStopword(word):
+               words.remove(word); 
+        return ' '.join(words);
 
     def handle_starttag(self, tag, attrs):
         #Recherche des liens
@@ -120,7 +125,7 @@ class htmlAnalyzer(HTMLParser):
                         #print(href);
                         self.addUri(href);
 
-text="ceci est un text, un text";
+text="ceci est un text, un text actually";
 url = "http://www.planet-libre.org";
 analyzer = htmlAnalyzer();
 analyzer.addUri(url);
@@ -128,7 +133,8 @@ analyzer.addUri(url);
 ## Test
 #print(analyzer.remove_punctuations(text));
 #stopwords=[]
-print(analyzer.isStopword("much"))
+print(text)
+print(analyzer.remove_stopwords(text))
 exit();
 text = analyzer.remove_punctuations(text);
 text = analyzer.stopwords(text)
