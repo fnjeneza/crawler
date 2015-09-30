@@ -17,7 +17,7 @@ class htmlAnalyzer(HTMLParser):
     def __init__(self):
         HTMLParser.__init__(self);
 
-        print("Init...");
+        print("Init...",end="");
         #count URIs
         self.counter = 0;
 
@@ -29,8 +29,11 @@ class htmlAnalyzer(HTMLParser):
         self.cursor.execute("DROP TABLE IF ExISTS crawl_tb");
         self.cursor.execute('''CREATE TABLE crawl_tb (id integer primary key autoincrement,
                                                     uri text unique)''');
-
+        print("Init... OK")
     def addUri(self, uri):
+        """
+        add Uri in the db
+        """
         try:
             self.cursor.execute("INSERT INTO crawl_tb(uri) VALUES(?)",[uri]);
             self.counter+=1;
@@ -38,31 +41,38 @@ class htmlAnalyzer(HTMLParser):
             error ="already added";
 
     def getUri(self, iterator):
+        """
+        return Uri where id=iterator
+        """
         self.cursor.execute("SELECT uri FROM crawl_tb WHERE id=?",[iterator]);
         return self.cursor.fetchone()[0];
         
 
     def getTotal(self):
+        """
+        Total links in db
+        """
         self.cursor.execute("SELECT COUNT DISTINCT uri FROM crawl_tb");
         return self.cursor.fetchone()[0];
 
     def tf(self, data):
-	#""" 
-	#calcul de la fréquence des mots 
-	#"""
+        """ 
+        calcul de la fréquence des mots 
+        """
 	#liste de mots
-	words_list = data.split(' ');
-
-	length = len(words_list);
+        words_list = data.split(' ');
+        
+        length = len(words_list);
 
 	#occurence des mots
-	words_occurence = {}
+        words_occurence = {}
 
-	word = words_list[0];
-	if not words_occurence.__contains__(word):
-		words_occurence[word]=words_list.count(word)/length;
+        
+        for word in words_list:
+            if not words_occurence.__contains__(word):
+                words_occurence[word]=words_list.count(word)/length;
 
-	return words_occurence;
+        return words_occurence;
 
     def handle_starttag(self, tag, attrs):
         #Recherche des liens
@@ -76,14 +86,15 @@ class htmlAnalyzer(HTMLParser):
                         #print(href);
                         self.addUri(href);
 
-
-text="ceci est un text(, un vrai text";
+text="ceci est un text, un vrai text";
 url = "http://www.planet-libre.org";
 analyzer = htmlAnalyzer();
 analyzer.addUri(url);
 
-analyszer.tf(text)
-break
+## Test
+print(analyzer.tf(text))
+exit()
+## End of test
 
 iterator=1;
 while (analyzer.counter<1000):
