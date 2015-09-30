@@ -28,8 +28,17 @@ class htmlAnalyzer(HTMLParser):
         #init table
         self.cursor.execute("DROP TABLE IF ExISTS crawl_tb");
         self.cursor.execute('''CREATE TABLE crawl_tb (id integer primary key autoincrement,
-                                                    uri text unique)''');
+                                                    uri text unique,
+                                                    stopwords text unique)''');
+        #init stopwords
+        with open("stopwords.txt") as stopwords:
+            for word in stopwords:
+                self.cursor.execute("INSERT INTO crawl_tb(stopwords) VALUES(?)",[word]);
+        
+        self.cursor.execute("select count(stopwords) from crawl_tb")
+        
         print("Init... OK")
+        
     def addUri(self, uri):
         """
         add Uri in the db
@@ -73,6 +82,7 @@ class htmlAnalyzer(HTMLParser):
                 words_occurence[word]=words_list.count(word)/length;
 
         return words_occurence;
+    
 
     def handle_starttag(self, tag, attrs):
         #Recherche des liens
