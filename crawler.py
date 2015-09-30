@@ -68,6 +68,10 @@ class htmlAnalyzer(HTMLParser):
         """ 
         calcul de la fréquence des mots 
         """
+        #remove punctuations before process
+        data = self.remove_punctuations(data);
+        print(data)
+
 	#liste de mots
         words_list = data.split(' ');
         
@@ -83,6 +87,14 @@ class htmlAnalyzer(HTMLParser):
 
         return words_occurence;
     
+    def remove_punctuations(self, text):
+        """
+        Remove punctuations in text
+        """
+        punctuations = ['.',',',';',':','!','?','~'];
+        for punctuation in punctuations:
+            text = text.replace(punctuation, '');   
+        return text;
 
     def handle_starttag(self, tag, attrs):
         #Recherche des liens
@@ -102,6 +114,8 @@ analyzer = htmlAnalyzer();
 analyzer.addUri(url);
 
 ## Test
+print(analyzer.remove_punctuations(text));
+
 print(analyzer.tf(text))
 exit()
 ## End of test
