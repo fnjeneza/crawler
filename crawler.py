@@ -99,12 +99,11 @@ class htmlAnalyzer(HTMLParser):
     def tfidf(self, pk):
         """ 
        tf_idf
-       pk primary key(id)
+       primary key(id)
         """
         
         self.cursor.execute("SELECT vector FROM crawl_tb WHERE id=?",[pk]);
         data = self.cursor.fetchone()[0]
-        print(data)
 
 	#liste de mots
         words_list = data.split();
@@ -203,6 +202,10 @@ while (iterator<analyzer.MAX):
     #    print("unknown error");
 
     iterator+=1;
+
+#tf_idf
+for index in range(1,analyzer.MAX):
+    analyzer.tfidf(index)
 
 
 #close all opened db or cursor
