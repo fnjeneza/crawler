@@ -18,11 +18,13 @@ import sqlite3
 class htmlAnalyzer(HTMLParser):
     def __init__(self):
         HTMLParser.__init__(self);
-        self.data=""
-        print("Init...",end="");
+        
+        print("Init...",end="\r");
         #count URIs
         self.counter = 0;
-        
+        self.data=""
+        self.MAX=3 #Max pages
+
         #create database
         self.db = sqlite3.connect("crawler.db");
         self.cursor = self.db.cursor();
@@ -49,9 +51,12 @@ class htmlAnalyzer(HTMLParser):
         """
         add Uri in the db
         """
+        if not self.isUrlOK(uri):
+            return
         try:
             self.cursor.execute("INSERT INTO crawl_tb(uri) VALUES(?)",[uri]);
             self.counter+=1;
+            print("link\t"+str(self.counter)+"\t"+uri);
         except sqlite3.IntegrityError:
             error ="already added";
 
@@ -111,7 +116,7 @@ class htmlAnalyzer(HTMLParser):
 
         return words_occurence;
     
-    def remove_punctuations(self, text):
+    def remove_symbols(self, text):
         """
         Remove punctuations in text
         """
@@ -153,22 +158,19 @@ class htmlAnalyzer(HTMLParser):
 
     def handle_starttag(self, tag, attrs):
         #Recherche des liens
-        
-        if(tag == "a"):
-            for attr in attrs:
-                if(attr[0] == "href"):
-                    href = attr[1];
-                    if(href.find("http")>=0):
-                        #print(self.counter);
-                        print("\t"+href);
-                        if self.isUrlOK(href):
+        if self.counter<self.MAX:
+            if(tag == "a"):
+                for attr in attrs:
+                    if(attr[0] == "href"):
+                        href = attr[1];
+                        if(href.find("http")>=0):
                             self.addUri(href);
 
     def handle_data(self, data):
         self.data = self.data+' '+data.strip();
 
 #text="ceci est un text, un text actually";
-url = "http://www.omgubuntu.co.uk";
+url = "http://news.softpedia.com/cat/Linux/";
 analyzer = htmlAnalyzer();
 analyzer.addUri(url);
 
@@ -196,17 +198,19 @@ text = analyzer.remove_stopwords(text);
 """
 
 iterator=1;
-while (analyzer.counter<10):
+while (iterator<analyzer.MAX):
     url = analyzer.getUri(iterator);
 
     #Retrieve an html page
-    print(url)
+    print("Crawling:\t"+str(iterator)+"\t"+url)
     try:
         html = urlopen(url);
+        analyzer.data='' # reinit data
         analyzer.feed(html.read().decode());
         text = analyzer.data.lower();
-        text = analyzer.remove_punctuations(text);
+        text = analyzer.remove_symbols(text);
         text = analyzer.remove_stopwords(text);
+        print(text)
         text = ' '.join(text.split())
         analyzer.vector(text, iterator)
         
@@ -219,9 +223,6 @@ while (analyzer.counter<10):
     #    print("unknown error");
 
     iterator+=1;
-###Test ####    
-#print(analyzer.idf())
-### end of Test ###
 
 #commit changes to the db
 analyzer.db.commit();
