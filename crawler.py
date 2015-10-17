@@ -192,7 +192,9 @@ while (iterator<analyzer.MAX):
         text = analyzer.remove_symbols(text);
         text = analyzer.remove_stopwords(text);
         analyzer.vector(text, iterator)
-        
+
+        #commit changes to the db
+        analyzer.db.commit()
     except HTTPError as e:
         print(e);
     except URLError as ee:
@@ -202,9 +204,8 @@ while (iterator<analyzer.MAX):
 
     iterator+=1;
 
-#commit changes to the db
-analyzer.db.commit();
+
+#close all opened db or cursor
 analyzer.cursor.close();
 analyzer.db.close();
 
-#print(analyzer.counter);
