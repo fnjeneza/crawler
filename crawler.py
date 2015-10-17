@@ -160,9 +160,9 @@ class htmlAnalyzer(HTMLParser):
                     href = attr[1];
                     if(href.find("http")>=0):
                         #print(self.counter);
-                        print(href);
-                        #if self.isUrlOK(href):
-                        #    self.addUri(href);
+                        #print(href);
+                        if self.isUrlOK(href):
+                            self.addUri(href);
 
     def handle_data(self, data):
         self.data = self.data+' '+data.strip();
@@ -200,7 +200,7 @@ while (analyzer.counter<10):
     url = analyzer.getUri(iterator);
 
     #Retrieve an html page
-    
+    print(url)
     try:
         html = urlopen(url);
         analyzer.feed(html.read().decode());
