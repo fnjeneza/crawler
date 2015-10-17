@@ -96,11 +96,16 @@ class htmlAnalyzer(HTMLParser):
         self.cursor.execute("UPDATE crawl_tb SET vector=? WHERE id=?",[text, pk_id]);
 
         
-    def tf(self, data):
+    def tfidf(self, pk):
         """ 
-       calcul de la fréquence des mots 
+       tf_idf
+       pk primary key(id)
         """
         
+        self.cursor.execute("SELECT vector FROM crawl_tb WHERE id=?",[pk]);
+        data = self.cursor.fetchone()[0]
+        print(data)
+
 	#liste de mots
         words_list = data.split();
         
@@ -112,8 +117,13 @@ class htmlAnalyzer(HTMLParser):
         for word in words_list:
             if not words_occurence.__contains__(word):
                  #check if word is already in the list
-                 words_occurence[word]=words_list.count(word)/length;
-
+                 tf = words_list.count(word)/length;
+                 self.cursor.execute("SELECT COUNT(vector) FROM crawl_tb "
+                                    "WHERE vector LIKE '%"+word+"%'")
+                 occurence = self.cursor.fetchone()[0];
+                 idf = log10(self.MAX/occurence)
+                 tf_idf = tf*idf
+                 words_occurence[word] = tf_idf
         return words_occurence;
     
     def remove_symbols(self, text):
@@ -121,7 +131,7 @@ class htmlAnalyzer(HTMLParser):
         Remove symbols in text
         """
         symbols = ['.',',',';',':','!','?','~','(',')','{','}',
-                '-','=','_','|','[',']','"',"'"];
+                '-','=','_','|','[',']','"',"'","\\","/"];
         for symbol in symbols:
             text = text.replace(symbol,' ');
         return text;
@@ -149,14 +159,6 @@ class htmlAnalyzer(HTMLParser):
             return False;
         return True;
 
-    def idf(self, word):
-        """ Calcul de l'idf"""
-        D = self.getTotal()  # total pages
-        self.cursor.execute("SELECT COUNT(id) FROM crawl_tb WHERE vector LIKE '%?%'", [word])
-        di = self.cursor.fetchone();
-        idfi = log10(D/di)  # idf
-        return idfi;
-
     def handle_starttag(self, tag, attrs):
         #Recherche des liens
         if self.counter<self.MAX:
@@ -175,28 +177,6 @@ url = "http://news.softpedia.com/cat/Linux/";
 analyzer = htmlAnalyzer();
 analyzer.addUri(url);
 
-## Test
-"""
-print(text)
-text = analyzer.remove_punctuations(text)
-print(analyzer.remove_stopwords(text))
-exit();
-#text = analyzer.remove_punctuations(text);
-#print(analyzer.tf(text))
-
-html = urlopen(url);
-analyzer.feed(html.read().decode());
-text = analyzer.data.lower();
-#print(text)
-#exit()
-#text = ' '.join(text);
-text = analyzer.remove_punctuations(text);
-text = analyzer.remove_stopwords(text);
-#tf = text.split();
-#r = analyzer.idf("launches")
-#print(r)
-## End of test
-"""
 
 iterator=1;
 while (iterator<analyzer.MAX):
@@ -211,11 +191,8 @@ while (iterator<analyzer.MAX):
         text = analyzer.data.lower();
         text = analyzer.remove_symbols(text);
         text = analyzer.remove_stopwords(text);
-        print(text)
-        text = ' '.join(text.split())
         analyzer.vector(text, iterator)
         
-        #analyzer.addUri(url);
     except HTTPError as e:
         print(e);
     except URLError as ee:
