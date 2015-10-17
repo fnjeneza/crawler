@@ -160,7 +160,7 @@ class htmlAnalyzer(HTMLParser):
                     href = attr[1];
                     if(href.find("http")>=0):
                         #print(self.counter);
-                        #print(href);
+                        print("\t"+href);
                         if self.isUrlOK(href):
                             self.addUri(href);
 
@@ -219,7 +219,6 @@ while (analyzer.counter<10):
     #    print("unknown error");
 
     iterator+=1;
-    exit();
 ###Test ####    
 #print(analyzer.idf())
 ### end of Test ###
