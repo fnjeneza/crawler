@@ -11,16 +11,18 @@
 from urllib.request import urlopen
 from urllib.error import HTTPError, URLError
 from html.parser import HTMLParser
+from math import log10
 import sqlite3
+
 
 class htmlAnalyzer(HTMLParser):
     def __init__(self):
         HTMLParser.__init__(self);
-
+        self.data=""
         print("Init...",end="");
         #count URIs
         self.counter = 0;
-
+        
         #create database
         self.db = sqlite3.connect("crawler.db");
         self.cursor = self.db.cursor();
@@ -29,12 +31,17 @@ class htmlAnalyzer(HTMLParser):
         self.cursor.execute("DROP TABLE IF ExISTS crawl_tb");
         self.cursor.execute('''CREATE TABLE crawl_tb (id integer primary key autoincrement,
                                                     uri text unique,
+                                                    vector text,
+                                                    tfidf text)''');
+        
+        self.cursor.execute("DROP TABLE IF EXISTS stopword_tb");
+        self.cursor.execute('''CREATE TABLE stopword_tb(id integer primary key autoincrement, 
                                                     stopword text unique)''');
-        #init stopwords
+        #init stopword table
         with open("stopwords.txt") as stopwords:
             for word in stopwords:
                 word = word.strip()
-                self.cursor.execute("INSERT INTO crawl_tb(stopword) VALUES(?)",[word]);
+                self.cursor.execute("INSERT INTO stopword_tb(stopword) VALUES(?)",[word]);
         
         print("Init... OK")
         
@@ -60,26 +67,37 @@ class htmlAnalyzer(HTMLParser):
         """
         Total links in db
         """
-        self.cursor.execute("SELECT COUNT DISTINCT uri FROM crawl_tb");
+        self.cursor.execute("SELECT COUNT(uri) FROM crawl_tb");
         return self.cursor.fetchone()[0];
 
     def isStopword(self, word):
         """
         Check if "word" is a stopword
         """
-        self.cursor.execute("SELECT stopword FROM crawl_tb WHERE stopword=?",[word])
+        self.cursor.execute("SELECT stopword FROM stopword_tb WHERE stopword=?",[word])
         
         if self.cursor.fetchone()==None:
             return False;
         return True;
 
+    def vector(self, text, pk_id):
+        """
+        save vector in db.
+        The vector must be without punctuations and each word separate 
+        by space
+        The vector is a simple text, which will be split before use
+        pk_id is the primary key id
+        """
+        self.cursor.execute("UPDATE crawl_tb SET vector=? WHERE id=?",[text, pk_id]);
+
+        
     def tf(self, data):
         """ 
-        calcul de la fréquence des mots 
+       calcul de la fréquence des mots 
         """
         
 	#liste de mots
-        words_list = data.split(' ');
+        words_list = data.split();
         
         length = len(words_list);
 
@@ -97,7 +115,7 @@ class htmlAnalyzer(HTMLParser):
         """
         Remove punctuations in text
         """
-        punctuations = ['.',',',';',':','!','?','~'];
+        punctuations = ['.',',',';',':','!','?','~','','(',')','{','}'];
         for punctuation in punctuations:
             text = text.replace(punctuation, '');
         return text;
@@ -107,11 +125,31 @@ class htmlAnalyzer(HTMLParser):
         Remove stopwords from text
         an empty list is given by default
         """
-        words = text.split(' ');
+        words = text.split();
         for word in words:
             if self.isStopword(word):
                words.remove(word); 
         return ' '.join(words);
+    
+    def isUrlOK(self, url):
+        """Check if url is alive"""
+        try:
+            response = urlopen(url)
+        except URLError as e:
+            return False;
+        code = response.getcode()
+        codes = {200,301,302}
+        if code not in codes:
+            return False;
+        return True;
+
+    def idf(self, word):
+        """ Calcul de l'idf"""
+        D = self.getTotal()  # total pages
+        self.cursor.execute("SELECT COUNT(id) FROM crawl_tb WHERE vector LIKE '%?%'", [word])
+        di = self.cursor.fetchone();
+        idfi = log10(D/di)  # idf
+        return idfi;
 
     def handle_starttag(self, tag, attrs):
         #Recherche des liens
@@ -122,46 +160,73 @@ class htmlAnalyzer(HTMLParser):
                     href = attr[1];
                     if(href.find("http")>=0):
                         #print(self.counter);
-                        #print(href);
-                        self.addUri(href);
+                        print(href);
+                        #if self.isUrlOK(href):
+                        #    self.addUri(href);
 
-text="ceci est un text, un text actually";
-url = "http://www.planet-libre.org";
+    def handle_data(self, data):
+        self.data = self.data+' '+data.strip();
+
+#text="ceci est un text, un text actually";
+url = "http://www.omgubuntu.co.uk";
 analyzer = htmlAnalyzer();
 analyzer.addUri(url);
 
 ## Test
-#print(analyzer.remove_punctuations(text));
-#stopwords=[]
+"""
 print(text)
+text = analyzer.remove_punctuations(text)
 print(analyzer.remove_stopwords(text))
 exit();
+#text = analyzer.remove_punctuations(text);
+#print(analyzer.tf(text))
+
+html = urlopen(url);
+analyzer.feed(html.read().decode());
+text = analyzer.data.lower();
+#print(text)
+#exit()
+#text = ' '.join(text);
 text = analyzer.remove_punctuations(text);
-text = analyzer.stopwords(text)
-print(analyzer.tf(text))
-exit()
+text = analyzer.remove_stopwords(text);
+#tf = text.split();
+#r = analyzer.idf("launches")
+#print(r)
 ## End of test
+"""
 
 iterator=1;
-while (analyzer.counter<1000):
+while (analyzer.counter<10):
     url = analyzer.getUri(iterator);
 
     #Retrieve an html page
-    print(url);
+    
     try:
         html = urlopen(url);
-        analyzer.feed(str(html.read()));
+        analyzer.feed(html.read().decode());
+        text = analyzer.data.lower();
+        text = analyzer.remove_punctuations(text);
+        text = analyzer.remove_stopwords(text);
+        text = ' '.join(text.split())
+        analyzer.vector(text, iterator)
+        
+        #analyzer.addUri(url);
     except HTTPError as e:
         print(e);
     except URLError as ee:
         print(ee);
-    except:
-        print("unknown error");
+    #except:
+    #    print("unknown error");
 
     iterator+=1;
+    exit();
+###Test ####    
+#print(analyzer.idf())
+### end of Test ###
 
 #commit changes to the db
 analyzer.db.commit();
 analyzer.cursor.close();
 analyzer.db.close();
+
 #print(analyzer.counter);
