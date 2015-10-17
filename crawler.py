@@ -118,11 +118,12 @@ class htmlAnalyzer(HTMLParser):
     
     def remove_symbols(self, text):
         """
-        Remove punctuations in text
+        Remove symbols in text
         """
-        punctuations = ['.',',',';',':','!','?','~','','(',')','{','}'];
-        for punctuation in punctuations:
-            text = text.replace(punctuation, '');
+        symbols = ['.',',',';',':','!','?','~','(',')','{','}',
+                '-','=','_','|','[',']','"',"'"];
+        for symbol in symbols:
+            text = text.replace(symbol,' ');
         return text;
     
     def remove_stopwords(self,text):
