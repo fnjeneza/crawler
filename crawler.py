@@ -23,7 +23,7 @@ class htmlAnalyzer(HTMLParser):
         #count URIs
         self.counter = 0;
         self.data=""
-        self.MAX=3 #Max pages
+        self.MAX=10 #Max pages
 
         #create database
         self.db = sqlite3.connect("crawler.db");
@@ -93,6 +93,13 @@ class htmlAnalyzer(HTMLParser):
         The vector is a simple text, which will be split before use
         pk_id is the primary key id
         """
+        text_unique = []
+        #remove duplicated word
+        for word in text.split():
+            if not word in text_unique:
+                text_unique.append(word)
+        
+        text = ' '.join(text_unique)
         self.cursor.execute("UPDATE crawl_tb SET vector=? WHERE id=?",[text, pk_id]);
 
         
@@ -110,27 +117,27 @@ class htmlAnalyzer(HTMLParser):
         
         length = len(words_list);
 
-	#occurence des mots
-        words_occurence = {}
-        
+	#word's tfidf
+        vector_tfidf = []
         for word in words_list:
-            if not words_occurence.__contains__(word):
-                 #check if word is already in the list
-                 tf = words_list.count(word)/length;
-                 self.cursor.execute("SELECT COUNT(vector) FROM crawl_tb "
-                                    "WHERE vector LIKE '%"+word+"%'")
-                 occurence = self.cursor.fetchone()[0];
-                 idf = log10(self.MAX/occurence)
-                 tf_idf = tf*idf
-                 words_occurence[word] = tf_idf
-        return words_occurence;
+            #check if word is already in the list
+            tf = words_list.count(word)/length;
+            self.cursor.execute("SELECT COUNT(vector) FROM crawl_tb "
+                                 "WHERE vector LIKE '%"+word+"%'")
+            occurence = self.cursor.fetchone()[0];
+            idf = log10(self.MAX/occurence)
+            tf_idf = tf*idf
+            vector_tfidf.append(str(tf_idf))
+        
+        vector_text = ' '.join(vector_tfidf)
+        self.cursor.execute("UPDATE crawl_tb SET tfidf=? WHERE id=?",[vector_text, pk]);
     
     def remove_symbols(self, text):
         """
         Remove symbols in text
         """
         symbols = ['.',',',';',':','!','?','~','(',')','{','}',
-                '-','=','_','|','[',']','"',"'","\\","/"];
+                '-','=','_','|','[',']','"',"'","\\","/","&"];
         for symbol in symbols:
             text = text.replace(symbol,' ');
         return text;
@@ -206,6 +213,7 @@ while (iterator<analyzer.MAX):
 #tf_idf
 for index in range(1,analyzer.MAX):
     analyzer.tfidf(index)
+    analyzer.db.commit()
 
 
 #close all opened db or cursor
