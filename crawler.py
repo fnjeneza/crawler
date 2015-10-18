@@ -29,7 +29,7 @@ class htmlAnalyzer(HTMLParser):
         self.db = sqlite3.connect("crawler.db");
         self.cursor = self.db.cursor();
     
-    def reset(self):
+    def reset_db(self):
         """
         reset db
         """
@@ -182,13 +182,13 @@ class htmlAnalyzer(HTMLParser):
         self.data = self.data+' '+data.strip();
 
 #text="ceci est un text, un text actually";
-reset = False
+reset_db = False
 
 url = "http://news.softpedia.com/cat/Linux/";
 analyzer = htmlAnalyzer();
 
-if reset:
-    analyzer.reset()
+if reset_db:
+    analyzer.reset_db()
 
 analyzer.addUri(url);
 
