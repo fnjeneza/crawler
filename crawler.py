@@ -19,7 +19,7 @@ class htmlAnalyzer(HTMLParser):
     def __init__(self):
         HTMLParser.__init__(self);
         
-        print("Init...",end="\r");
+        #print("Init...",end="\r");
         #count URIs
         self.counter = 0;
         self.data=""
@@ -28,7 +28,11 @@ class htmlAnalyzer(HTMLParser):
         #create database
         self.db = sqlite3.connect("crawler.db");
         self.cursor = self.db.cursor();
-
+    
+    def reset(self):
+        """
+        reset db
+        """
         #init table
         self.cursor.execute("DROP TABLE IF ExISTS crawl_tb");
         self.cursor.execute('''CREATE TABLE crawl_tb (id integer primary key autoincrement,
@@ -45,7 +49,7 @@ class htmlAnalyzer(HTMLParser):
                 word = word.strip()
                 self.cursor.execute("INSERT INTO stopword_tb(stopword) VALUES(?)",[word]);
         
-        print("Init... OK")
+        #print("Init... OK")
         
     def addUri(self, uri):
         """
@@ -108,7 +112,6 @@ class htmlAnalyzer(HTMLParser):
        tf_idf
        primary key(id)
         """
-        
         self.cursor.execute("SELECT vector FROM crawl_tb WHERE id=?",[pk]);
         data = self.cursor.fetchone()[0]
 
@@ -179,8 +182,14 @@ class htmlAnalyzer(HTMLParser):
         self.data = self.data+' '+data.strip();
 
 #text="ceci est un text, un text actually";
+reset = False
+
 url = "http://news.softpedia.com/cat/Linux/";
 analyzer = htmlAnalyzer();
+
+if reset = True:
+    analyzer.reset()
+
 analyzer.addUri(url);
 
 
