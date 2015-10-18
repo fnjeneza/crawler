@@ -23,7 +23,7 @@ class htmlAnalyzer(HTMLParser):
         #count URIs
         self.counter = 0;
         self.data=""
-        self.MAX=10 #Max pages
+        self.MAX=1000 #Max pages
 
         #create database
         self.db = sqlite3.connect("crawler.db");
@@ -187,7 +187,7 @@ reset = False
 url = "http://news.softpedia.com/cat/Linux/";
 analyzer = htmlAnalyzer();
 
-if reset = True:
+if reset:
     analyzer.reset()
 
 analyzer.addUri(url);
