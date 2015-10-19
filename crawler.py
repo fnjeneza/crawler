@@ -13,6 +13,7 @@ from urllib.error import HTTPError, URLError
 from html.parser import HTMLParser
 from math import log10
 import sqlite3
+import treetaggerwrapper
 
 
 class htmlAnalyzer(HTMLParser):
@@ -63,6 +64,15 @@ class htmlAnalyzer(HTMLParser):
             print("link\t"+str(self.counter)+"\t"+uri);
         except sqlite3.IntegrityError:
             error ="already added";
+    
+    def lemmatise(self, text):
+        tagger = treetaggerwrapper.TreeTagger(TAGLANG='fr')
+        tags = tagger.tag_text(text)
+        mytags = treetaggerwrapper.make_tags(tags)
+        lemma_list=[]
+        for tag in mytags:
+            lemma_list.append(tag.lemma)
+        return lemma_list
 
     def getUri(self, iterator):
         """
@@ -194,7 +204,7 @@ analyzer.addUri(url);
 
 
 iterator=1;
-while (iterator<analyzer.MAX):
+while (iterator<=analyzer.MAX):
     url = analyzer.getUri(iterator);
 
     #Retrieve an html page
@@ -206,6 +216,7 @@ while (iterator<analyzer.MAX):
         text = analyzer.data.lower();
         text = analyzer.remove_symbols(text);
         text = analyzer.remove_stopwords(text);
+        text = ' '.join(analyzer.lemmatise(text))
         analyzer.vector(text, iterator)
 
         #commit changes to the db
