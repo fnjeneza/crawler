@@ -11,7 +11,7 @@
 from urllib.request import urlopen
 from urllib.error import HTTPError, URLError
 from html.parser import HTMLParser
-from math import log10
+from math import log10, sqrt, pow
 import sqlite3
 import treetaggerwrapper
 
@@ -24,7 +24,7 @@ class htmlAnalyzer(HTMLParser):
         #count URIs
         self.counter = 0;
         self.data=""
-        self.MAX=1000 #Max pages
+        self.MAX=3 #Max pages
 
         #create database
         self.db = sqlite3.connect("crawler.db");
@@ -145,6 +145,25 @@ class htmlAnalyzer(HTMLParser):
         vector_text = ' '.join(vector_tfidf)
         self.cursor.execute("UPDATE crawl_tb SET tfidf=? WHERE id=?",[vector_text, pk]);
     
+    def similarity(self, vector1, vector2):
+        """
+        cosinus de salton
+        """
+        pos = 0;
+        num = 0;
+        norm_a = 0;
+        norm_b = 0;
+        vector_size = len(vector1)
+        while pos < vector_size:
+            num = num+(vector1[pos]*vector2[pos]) 
+            norm_a = norm_a+pow(vector1[pos],2)
+            norm_b = norm_b+pow(vector2[pos],2)
+            pos+=1
+        
+        norm_a = sqrt(norm_a)
+        norm_b = sqrt(norm_b)
+        return num/(norm_a*norm_b)
+
     def remove_symbols(self, text):
         """
         Remove symbols in text
