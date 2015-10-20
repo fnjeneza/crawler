@@ -107,13 +107,6 @@ class htmlAnalyzer(HTMLParser):
         The vector is a simple text, which will be split before use
         pk_id is the primary key id
         """
-        text_unique = []
-        #remove duplicated word
-        for word in text.split():
-            if not word in text_unique:
-                text_unique.append(word)
-        
-        text = ' '.join(text_unique)
         self.cursor.execute("UPDATE crawl_tb SET vector=? WHERE id=?",[text, pk_id]);
 
     def tf(self, text):
