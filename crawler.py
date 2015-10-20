@@ -137,29 +137,34 @@ class htmlAnalyzer(HTMLParser):
        primary key(id)
         """
         self.cursor.execute("SELECT vector, uri FROM crawl_tb WHERE id=?",[pk]);
-        data = self.cursor.fetchone()[0]
-        print("Calcul du tf_idf: "+pk+"\t"+self.cursor.fetchone()[1])
-
-	#all words even duplicated
-        words_list = data.split();
-
-        o_words = self.remove_duplicated(words_list) # list without duplicated
+        results = self.cursor.fetchone()
+        data = results[0]
+        print("Calcul du tf_idf: "+str(pk)+"\t"+results[1])
         
-        length = len(words_list);
+        words_tfs = self.tf(data) # words and tfs
+        
+        words = words_tfs[0] # only words non-duplicated
+        tfs = words_tfs[1] # only tfs
+
+        data = data.split()
+        length = len(data);
 
 	#word's tfidf
         vector_tfidf = []
-        for word in o_words:
-            tf = words_list.count(word)/length;
+        for word in words:
+            index = words.index(word)
+            tf= tfs[index]
             self.cursor.execute("SELECT COUNT(vector) FROM crawl_tb "
                                  "WHERE vector LIKE '%"+word+"%'")
             occurence = self.cursor.fetchone()[0];
             idf = log10(self.MAX/occurence)
             tf_idf = tf*idf
             vector_tfidf.append(str(tf_idf))
+            
         
-        vector_text = ' '.join(vector_tfidf)
-        self.cursor.execute("UPDATE crawl_tb SET tfidf=? WHERE id=?",[vector_text, pk]);
+        vector_tfidf = ' '.join(vector_tfidf)
+        words = ' '.join(words)
+        self.cursor.execute("UPDATE crawl_tb SET vector=?, tfidf=? WHERE id=?",[words, vector_tfidf, pk]);
     
     def handle_request(self, request, tfidf_request):
         """
@@ -288,9 +293,6 @@ reset_db = False
 url = "http://www.toolinux.com/";
 analyzer = htmlAnalyzer();
 
-text = "loutre dans la riviere des loutre"
-print(analyzer.tf(text))
-exit()
 if reset_db:
     analyzer.reset_db()
 
