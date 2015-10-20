@@ -122,8 +122,9 @@ class htmlAnalyzer(HTMLParser):
        tf_idf
        primary key(id)
         """
-        self.cursor.execute("SELECT vector FROM crawl_tb WHERE id=?",[pk]);
+        self.cursor.execute("SELECT vector, uri FROM crawl_tb WHERE id=?",[pk]);
         data = self.cursor.fetchone()[0]
+        print("Calcul du tf_idf: "+pk+"\t"+self.cursor.fetchone()[1])
 
 	#liste de mots
         words_list = data.split();
@@ -213,7 +214,7 @@ class htmlAnalyzer(HTMLParser):
 #text="ceci est un text, un text actually";
 reset_db = False
 
-url = "http://news.softpedia.com/cat/Linux/";
+url = "http://www.toolinux.com/";
 analyzer = htmlAnalyzer();
 
 if reset_db:
