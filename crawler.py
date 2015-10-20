@@ -116,6 +116,20 @@ class htmlAnalyzer(HTMLParser):
         text = ' '.join(text_unique)
         self.cursor.execute("UPDATE crawl_tb SET vector=? WHERE id=?",[text, pk_id]);
 
+    def tf(self, text):
+        """
+        calculate a tf of a text or vector
+        """
+        if type(text)==str:
+            text = text.split() #convert str to list
+        
+        tf=[] # tf list
+        words_len = len(text)
+        words = self.remove_duplicated(text)
+        for word in words:
+            tf.append(text.count(word)/words_len)
+
+        return (words, tf)
         
     def tfidf(self, pk):
         """ 
@@ -126,15 +140,16 @@ class htmlAnalyzer(HTMLParser):
         data = self.cursor.fetchone()[0]
         print("Calcul du tf_idf: "+pk+"\t"+self.cursor.fetchone()[1])
 
-	#liste de mots
+	#all words even duplicated
         words_list = data.split();
+
+        o_words = self.remove_duplicated(words_list) # list without duplicated
         
         length = len(words_list);
 
 	#word's tfidf
         vector_tfidf = []
-        for word in words_list:
-            #check if word is already in the list
+        for word in o_words:
             tf = words_list.count(word)/length;
             self.cursor.execute("SELECT COUNT(vector) FROM crawl_tb "
                                  "WHERE vector LIKE '%"+word+"%'")
@@ -268,12 +283,14 @@ class htmlAnalyzer(HTMLParser):
     def handle_data(self, data):
         self.data = self.data+' '+data.strip();
 
-#text="ceci est un text, un text actually";
 reset_db = False
 
 url = "http://www.toolinux.com/";
 analyzer = htmlAnalyzer();
 
+text = "loutre dans la riviere des loutre"
+print(analyzer.tf(text))
+exit()
 if reset_db:
     analyzer.reset_db()
 
