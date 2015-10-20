@@ -217,6 +217,21 @@ class htmlAnalyzer(HTMLParser):
             text = text.replace(symbol,' ');
         return text;
     
+    def remove_duplicated(self, text):
+        """
+        remove all duplicated word
+        return list
+        """
+        optimised=[]
+        if type(text)==str:
+            text = text.split()
+
+        for word in text:
+            if word not in optimised:
+                optimised.append(word)
+
+        return optimised
+
     def remove_stopwords(self,text):
         """
         Remove stopwords from text
@@ -259,9 +274,6 @@ reset_db = False
 url = "http://www.toolinux.com/";
 analyzer = htmlAnalyzer();
 
-vec = "linux calming".split()
-analyzer.handle_request(vec, [0.5,0.5])
-exit()
 if reset_db:
     analyzer.reset_db()
 
