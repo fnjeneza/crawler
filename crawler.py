@@ -146,6 +146,48 @@ class htmlAnalyzer(HTMLParser):
         vector_text = ' '.join(vector_tfidf)
         self.cursor.execute("UPDATE crawl_tb SET tfidf=? WHERE id=?",[vector_text, pk]);
     
+    def handle_request(self, request, tfidf_request):
+        """
+        Handle a user request
+        : request: list
+        : links: list 
+        """
+        incr=0
+        cond=""
+        responses=[] # list  [salton cosinus, url]
+        links=[] # list of urls to return 
+        for value in request:
+            if incr==0:
+                cond = "'%"+value+"%'"
+            else:
+                cond =cond+" OR vector LIKE '%"+value+"%'"
+            incr+=1
+
+        self.cursor.execute("SELECT uri,vector, tfidf FROM crawl_tb WHERE vector LIKE "+cond)
+        results = self.cursor.fetchall()
+        tfidf_vector=[] #tfidf of the returned vector
+        for result in results:
+            url = result[0]
+            vector = result[1].split();
+            tfidf = result[2].split();
+            for word in request:
+                try:
+                    index = vector.index(word)
+                    tfidf_vector.append(float(tfidf[index]))
+                except ValueError:
+                    tfidf.append(0)
+            #calculate similarity
+            similarity = self.similarity(tfidf_request, tfidf_vector)
+            responses.append([similarity,url]) # append an url
+            tfidf.clear()
+        
+        responses.sort(reverse=True) #sort result by salton cosine
+        
+        for response in responses:
+            links.append(response[1]) # links to return
+
+        return links
+
     def similarity(self, vector1, vector2):
         """
         cosinus de salton
@@ -217,6 +259,9 @@ reset_db = False
 url = "http://www.toolinux.com/";
 analyzer = htmlAnalyzer();
 
+vec = "linux calming".split()
+analyzer.handle_request(vec, [0.5,0.5])
+exit()
 if reset_db:
     analyzer.reset_db()
 
