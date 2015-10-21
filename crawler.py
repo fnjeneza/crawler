@@ -190,11 +190,11 @@ class htmlAnalyzer(HTMLParser):
                     index = vector.index(word)
                     tfidf_vector.append(float(tfidf[index]))
                 except ValueError:
-                    tfidf.append(0)
+                    tfidf_vector.append(0)
             #calculate similarity
             similarity = self.similarity(tfidf_request, tfidf_vector)
             responses.append([similarity,url]) # append an url
-            tfidf.clear()
+            tfidf_vector.clear()
         
         responses.sort(reverse=True) #sort result by salton cosine
         
@@ -320,8 +320,6 @@ while (iterator<=analyzer.MAX):
         analyzer.data='' # reinit data
         analyzer.feed(html.read().decode());
         text = analyzer.data.lower();
-        print(text)
-        exit()
         text = analyzer.remove_symbols(text);
         text = analyzer.remove_stopwords(text);
         text = ' '.join(analyzer.lemmatise(text))
