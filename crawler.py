@@ -24,12 +24,14 @@ class htmlAnalyzer(HTMLParser):
         #count URIs
         self.counter = 0;
         self.data=""
-        self.MAX=3 #Max pages
+        self.MAX=1000 #Max pages
 
         #create database
         self.db = sqlite3.connect("crawler.db");
         self.cursor = self.db.cursor();
-    
+        self.is_script=False
+        self.is_style=False
+
     def reset_db(self):
         """
         reset db
@@ -61,7 +63,7 @@ class htmlAnalyzer(HTMLParser):
         try:
             self.cursor.execute("INSERT INTO crawl_tb(uri) VALUES(?)",[uri]);
             self.counter+=1;
-            print("link\t"+str(self.counter)+"\t"+uri);
+            #print("link\t"+str(self.counter)+"\t"+uri);
         except sqlite3.IntegrityError:
             error ="already added";
     
@@ -260,6 +262,8 @@ class htmlAnalyzer(HTMLParser):
         """Check if url is alive"""
         try:
             response = urlopen(url)
+            if response.geturl().find("softpedia.com") <0 :
+                    return False
         except URLError as e:
             return False;
         code = response.getcode()
@@ -271,19 +275,33 @@ class htmlAnalyzer(HTMLParser):
     def handle_starttag(self, tag, attrs):
         #Recherche des liens
         if self.counter<self.MAX:
+            if tag=="script":
+                self.is_script=True
+
+            if tag=="style":
+                self.is_style=False
+
             if(tag == "a"):
                 for attr in attrs:
                     if(attr[0] == "href"):
                         href = attr[1];
                         if(href.find("http")>=0):
                             self.addUri(href);
+  
+    def handle_endtag(self, tag):
+        if tag=="script":
+            self.is_script=False
+
+        if tag=="style":
+            self.is_style=False
 
     def handle_data(self, data):
-        self.data = self.data+' '+data.strip();
+        if not self.is_script and not self.is_style:
+            self.data = self.data+' '+data.strip();
 
-reset_db = False
+reset_db =False
 
-url = "http://www.toolinux.com/";
+url = "http://news.softpedia.com/cat/Linux/";
 analyzer = htmlAnalyzer();
 
 if reset_db:
@@ -291,22 +309,23 @@ if reset_db:
 
 analyzer.addUri(url);
 
-
 iterator=1;
 while (iterator<=analyzer.MAX):
     url = analyzer.getUri(iterator);
 
     #Retrieve an html page
-    print("Crawling:\t"+str(iterator)+"\t"+url)
+    print("Crawl:\t"+str(iterator)+"\t"+url)
     try:
         html = urlopen(url);
         analyzer.data='' # reinit data
         analyzer.feed(html.read().decode());
         text = analyzer.data.lower();
+        print(text)
+        exit()
         text = analyzer.remove_symbols(text);
         text = analyzer.remove_stopwords(text);
         text = ' '.join(analyzer.lemmatise(text))
-        analyzer.vector(text, iterator)
+        analyzer.vector(text, iterator) #save vector in db
 
         #commit changes to the db
         analyzer.db.commit()
@@ -320,7 +339,7 @@ while (iterator<=analyzer.MAX):
     iterator+=1;
 
 #tf_idf
-for index in range(1,analyzer.MAX):
+for index in range(1,analyzer.MAX+1):
     analyzer.tfidf(index)
     analyzer.db.commit()
 
