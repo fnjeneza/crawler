@@ -103,17 +103,19 @@ class htmlAnalyzer(HTMLParser):
     def tf(self, text):
         """
         calculate a tf of a text or vector
+        returns a dict {word:tf}
         """
         if type(text)==str:
-            text = text.split() #convert str to list
+            vector = text.split() #convert str to list
         
-        tf=[] # tf list
-        words_len = len(text)
-        words = self.remove_duplicated(text)
-        for word in words:
-            tf.append(text.count(word)/words_len)
+        vector_tf={} # word:tf dict
+        nk = len(vector) #length of the doccument
+        
+        for word in vector:
+            if word not in vector_tf:
+                vector_tf[word]=vector.count(word)/nk
 
-        return (words, tf)
+        return vector_tf
         
     def tfidf(self, pk):
         """ 
