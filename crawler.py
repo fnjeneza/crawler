@@ -90,16 +90,6 @@ class htmlAnalyzer(HTMLParser):
         self.cursor.execute("SELECT COUNT(uri) FROM crawl_tb");
         return self.cursor.fetchone()[0];
 
-    def isStopword(self, word):
-        """
-        Check if "word" is a stopword
-        """
-        self.cursor.execute("SELECT stopword FROM stopword_tb WHERE stopword=?",[word])
-        
-        if self.cursor.fetchone()==None:
-            return False;
-        return True;
-
     def vector(self, text, pk_id):
         """
         save vector in db.
