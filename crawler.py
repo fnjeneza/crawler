@@ -26,7 +26,8 @@ class htmlAnalyzer(HTMLParser):
         self.data=""
         self.MAX=5 #Max pages
         self.memory = {} #uri, vector and tf.idf
-        
+        self.urls=[] #urls list
+
         #create database
         self.db = sqlite3.connect("crawler.db");
         self.cursor = self.db.cursor();
@@ -225,7 +226,7 @@ class htmlAnalyzer(HTMLParser):
         Remove symbols in text
         """
         symbols = ['.',',',';',':','!','?','~','(',')','{','}',
-                '-','=','_','|','[',']','"',"'","\\","/","&"];
+                '-','=','_','|','[',']','"',"\\","/","&"];
         for symbol in symbols:
             text = text.replace(symbol,' ');
         return text;
@@ -255,7 +256,8 @@ class htmlAnalyzer(HTMLParser):
         for word in words:
             if word in self.stopwords:
                 index.append(words.index(word))
-
+        
+        index.sort()
         index.reverse()
         for i in index:
             words.pop(i)
@@ -290,8 +292,9 @@ class htmlAnalyzer(HTMLParser):
                 for attr in attrs:
                     if(attr[0] == "href"):
                         href = attr[1];
-                        if(href.find("http")>=0):
-                            self.addUri(href);
+                        if href.find("http")>=0 and href.find("ubuntu.com")>=0:
+                            if href not in self.urls:
+                                self.urls.append(href)
   
     def handle_endtag(self, tag):
         if tag=="script":
@@ -310,20 +313,10 @@ class htmlAnalyzer(HTMLParser):
         crawl a site
         """
     
-        url = "http://news.softpedia.com/cat/Linux/";
         #analyzer = htmlAnalyzer();
-
+        self.urls.append(url)
     
-        self.reset_db()
-
-        self.addUri(url);
-
-        iterator=1;
-        while (iterator<=self.MAX):
-            url = self.getUri(iterator);
-
-            #Retrieve an html page
-            print("Crawl:\t"+str(iterator)+"\t"+url)
+        for url in self.urls:
             try:
                 html = urlopen(url);
                 self.data='' # reinit data
@@ -331,28 +324,27 @@ class htmlAnalyzer(HTMLParser):
                 text = self.data.lower();
                 text = self.remove_symbols(text);
                 text = self.remove_stopwords(text);
+                text = text.replace("'", ' ')
                 text = self.lemmatise(text)
-                self.vector(text, iterator) #save vector in db
-
-                #commit changes to the db
-                self.db.commit()
+                vector_tf = self.tf(text) #compute word:tf 
+                self.memory[url] = vector_tf
+                
             except HTTPError as e:
                 print(e);
             except URLError as ee:
                 print(ee);
+            except UnicodeDecodeError as eee:
+                print(eee)
             #except:
             #    print("unknown error");
 
-            iterator+=1;
-
-        #tf_idf
-        for index in range(1,self.MAX+1):
-            self.tfidf(index)
-            self.db.commit()
-
-
-        #close all opened db or cursor
-        self.cursor.close();
+        print("*******************")
+        exit()
+        #compute tf_idf
+        for uri in self.memory:
+            vector_idf = self.idf(self.memory[uri])
+            tfidf = tfidf(self.memory[uri], vector_idf)
+            self.memory[uri]=tfidf
 
 ############################################################
 """
