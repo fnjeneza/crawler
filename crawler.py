@@ -64,6 +64,9 @@ class htmlAnalyzer(HTMLParser):
             error ="already added";
     
     def lemmatise(self, text):
+        """
+        lemmatise a text
+        """
         tagger = treetaggerwrapper.TreeTagger(TAGLANG='fr')
         tags = tagger.tag_text(text)
         mytags = treetaggerwrapper.make_tags(tags)
@@ -247,7 +250,6 @@ class htmlAnalyzer(HTMLParser):
     def remove_stopwords(self,text):
         """
         Remove stopwords from text
-        and returns a list
         """
         words = text.split();
         index = []
@@ -260,7 +262,7 @@ class htmlAnalyzer(HTMLParser):
         for i in index:
             words.pop(i)
 
-        return words
+        return ' '.join(words)
 
     
     def isUrlOK(self, url):
