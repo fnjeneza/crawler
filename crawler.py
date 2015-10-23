@@ -142,40 +142,21 @@ class htmlAnalyzer(HTMLParser):
 
         return vector_idf
 
-    def tfidf(self, pk):
-        """ 
-       tf_idf
-       primary key(id)
+    def tfidf(self, vector_tf, vector_idf):
         """
-        self.cursor.execute("SELECT vector, uri FROM crawl_tb WHERE id=?",[pk]);
-        results = self.cursor.fetchone()
-        data = results[0]
-        print("Calcul du tf_idf: "+str(pk)+"\t"+results[1])
-        
-        words_tfs = self.tf(data) # words and tfs
-        
-        words = words_tfs[0] # only words non-duplicated
-        tfs = words_tfs[1] # only tfs
+        compute tf.idf
+        length of vector_tf and vector_idf must be the same
+        return a dict {word:tf.idf}
+        """
+        if len(vector_tf)!=len(vector_idf):
+            return 
 
-        data = data.split()
-        length = len(data);
+        vector_tfidf={} #word:tf_idf dict
 
-	#word's tfidf
-        vector_tfidf = []
-        for word in words:
-            index = words.index(word)
-            tf= tfs[index]
-            self.cursor.execute("SELECT COUNT(vector) FROM crawl_tb "
-                                 "WHERE vector LIKE '%"+word+"%'")
-            occurence = self.cursor.fetchone()[0];
-            idf = log10(self.MAX/occurence)
-            tf_idf = tf*idf
-            vector_tfidf.append(str(tf_idf))
-            
-        
-        vector_tfidf = ' '.join(vector_tfidf)
-        words = ' '.join(words)
-        self.cursor.execute("UPDATE crawl_tb SET vector=?, tfidf=? WHERE id=?",[words, vector_tfidf, pk]);
+        for word in vector_tf:
+            vector_tfidf[word] = vector_tf[word]*vector_idf[word]
+
+        return vector_tfidf
     
     def handle_request(self, request, tfidf_request):
         """
