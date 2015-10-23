@@ -323,7 +323,7 @@ class htmlAnalyzer(HTMLParser):
                 text = self.data.lower();
                 text = self.remove_symbols(text);
                 text = self.remove_stopwords(text);
-                text = ' '.join(self.lemmatise(text))
+                text = self.lemmatise(text)
                 self.vector(text, iterator) #save vector in db
 
                 #commit changes to the db
