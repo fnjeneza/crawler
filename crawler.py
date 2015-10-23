@@ -25,7 +25,8 @@ class htmlAnalyzer(HTMLParser):
         self.counter = 0;
         self.data=""
         self.MAX=5 #Max pages
-
+        self.memory = {} #uri, vector and tf.idf
+        
         #create database
         self.db = sqlite3.connect("crawler.db");
         self.cursor = self.db.cursor();
@@ -108,6 +109,7 @@ class htmlAnalyzer(HTMLParser):
         if type(text)==str:
             vector = text.split() #convert str to list
         
+            
         vector_tf={} # word:tf dict
         nk = len(vector) #length of the doccument
         
@@ -117,6 +119,29 @@ class htmlAnalyzer(HTMLParser):
 
         return vector_tf
         
+    def idf(self, vector):
+        """
+        compute idf of text
+        return a dict {word:idf}
+        """
+        if vector==str:
+            vector = text.split()
+
+        vector_idf={}
+
+        D = len(self.memory) #total number of documents in the corpus
+        for word in vector:
+            di=0 #number of the documents where the term word appears
+            for uri in self.memory:
+                if word in self.memory[uri]:
+                    di+=1
+            if di==0:
+                di=1    
+            idf = log10(D/di)
+            vector_idf[word] = idf
+
+        return vector_idf
+
     def tfidf(self, pk):
         """ 
        tf_idf
