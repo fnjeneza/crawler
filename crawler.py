@@ -300,8 +300,59 @@ class htmlAnalyzer(HTMLParser):
         if not self.is_script and not self.is_style:
             self.data = self.data+' '+data.strip();
 
-reset_db =False
 
+    def crawl(self, url):
+        """
+        crawl a site
+        """
+    
+        url = "http://news.softpedia.com/cat/Linux/";
+        #analyzer = htmlAnalyzer();
+
+    
+        self.reset_db()
+
+        self.addUri(url);
+
+        iterator=1;
+        while (iterator<=self.MAX):
+            url = self.getUri(iterator);
+
+            #Retrieve an html page
+            print("Crawl:\t"+str(iterator)+"\t"+url)
+            try:
+                html = urlopen(url);
+                self.data='' # reinit data
+                self.feed(html.read().decode());
+                text = self.data.lower();
+                text = self.remove_symbols(text);
+                text = self.remove_stopwords(text);
+                text = ' '.join(self.lemmatise(text))
+                self.vector(text, iterator) #save vector in db
+
+                #commit changes to the db
+                self.db.commit()
+            except HTTPError as e:
+                print(e);
+            except URLError as ee:
+                print(ee);
+            #except:
+            #    print("unknown error");
+
+            iterator+=1;
+
+        #tf_idf
+        for index in range(1,self.MAX+1):
+            self.tfidf(index)
+            self.db.commit()
+
+
+        #close all opened db or cursor
+        self.cursor.close();
+
+############################################################
+"""
+reset_db = False
 url = "http://news.softpedia.com/cat/Linux/";
 analyzer = htmlAnalyzer();
 
@@ -346,4 +397,5 @@ for index in range(1,analyzer.MAX+1):
 #close all opened db or cursor
 analyzer.cursor.close();
 analyzer.db.close();
-
+"""
+######################################################
