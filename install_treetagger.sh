@@ -14,5 +14,7 @@ wget -c http://www.cis.uni-muenchen.de/~schmid/tools/TreeTagger/data/tree-tagger
 wget -c http://www.cis.uni-muenchen.de/~schmid/tools/TreeTagger/data/tagger-scripts.tar.gz
 wget -c http://www.cis.uni-muenchen.de/~schmid/tools/TreeTagger/data/install-tagger.sh
 wget -c http://www.cis.uni-muenchen.de/~schmid/tools/TreeTagger/data/french-par-linux-3.2-utf8.bin.gz
+wget -c http://www.cis.uni-muenchen.de/~schmid/tools/TreeTagger/data/english-par-linux-3.2-utf8.bin.gz
+
 
 sh install-tagger.sh
