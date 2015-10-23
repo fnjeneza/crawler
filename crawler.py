@@ -247,13 +247,21 @@ class htmlAnalyzer(HTMLParser):
     def remove_stopwords(self,text):
         """
         Remove stopwords from text
-        an empty list is given by default
+        and returns a list
         """
         words = text.split();
+        index = []
+        
         for word in words:
-            if self.isStopword(word):
-               words.remove(word); 
-        return ' '.join(words);
+            if word in self.stopwords:
+                index.append(words.index(word))
+
+        index.reverse()
+        for i in index:
+            words.pop(i)
+
+        return words
+
     
     def isUrlOK(self, url):
         """Check if url is alive"""
