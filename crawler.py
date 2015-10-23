@@ -67,13 +67,13 @@ class htmlAnalyzer(HTMLParser):
         """
         lemmatise a text
         """
-        tagger = treetaggerwrapper.TreeTagger(TAGLANG='fr')
+        tagger = treetaggerwrapper.TreeTagger(TAGLANG='en')
         tags = tagger.tag_text(text)
         mytags = treetaggerwrapper.make_tags(tags)
         lemma_list=[]
         for tag in mytags:
             lemma_list.append(tag.lemma)
-        return lemma_list
+        return ' '.join(lemma_list)
 
     def getUri(self, iterator):
         """
