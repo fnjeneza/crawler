@@ -24,13 +24,19 @@ class htmlAnalyzer(HTMLParser):
         #count URIs
         self.counter = 0;
         self.data=""
-        self.MAX=1000 #Max pages
+        self.MAX=5 #Max pages
 
         #create database
         self.db = sqlite3.connect("crawler.db");
         self.cursor = self.db.cursor();
         self.is_script=False
         self.is_style=False
+        self.stopwords=[] #stop words list
+        
+        #loading stop words
+        with open("stopwords.txt") as stopwords:
+            for word in stopwords:
+                self.stopwords.append(word.strip())
 
     def reset_db(self):
         """
@@ -43,17 +49,7 @@ class htmlAnalyzer(HTMLParser):
                                                     vector text,
                                                     tfidf text)''');
         
-        self.cursor.execute("DROP TABLE IF EXISTS stopword_tb");
-        self.cursor.execute('''CREATE TABLE stopword_tb(id integer primary key autoincrement, 
-                                                    stopword text unique)''');
-        #init stopword table
-        with open("stopwords.txt") as stopwords:
-            for word in stopwords:
-                word = word.strip()
-                self.cursor.execute("INSERT INTO stopword_tb(stopword) VALUES(?)",[word]);
-        
-        #print("Init... OK")
-        
+    
     def addUri(self, uri):
         """
         add Uri in the db
