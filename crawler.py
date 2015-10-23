@@ -220,6 +220,7 @@ class htmlAnalyzer(HTMLParser):
         
         norm_a = sqrt(norm_a)
         norm_b = sqrt(norm_b)
+
         return num/(norm_a*norm_b)
 
     def remove_symbols(self, text):
@@ -279,7 +280,7 @@ class htmlAnalyzer(HTMLParser):
                 self.is_script=True
 
             if tag=="style":
-                self.is_style=False
+                self.is_style=True
 
             if(tag == "a"):
                 for attr in attrs:
