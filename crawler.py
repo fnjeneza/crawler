@@ -24,7 +24,7 @@ class htmlAnalyzer(HTMLParser):
         #count URIs
         self.counter = 0;
         self.data=""
-        self.MAX=5 #Max pages
+        self.MAX=1000 #Max pages
         self.memory = {} #uri, vector and tf.idf
         self.urls=[] #urls list
 
@@ -226,7 +226,7 @@ class htmlAnalyzer(HTMLParser):
         Remove symbols in text
         """
         symbols = ['.',',',';',':','!','?','~','(',')','{','}',
-                '-','=','_','|','[',']','"',"\\","/","&"];
+                '-','=','_','|','[',']','"',"\\","/","&","@","#"];
         for symbol in symbols:
             text = text.replace(symbol,' ');
         return text;
@@ -253,14 +253,19 @@ class htmlAnalyzer(HTMLParser):
         words = text.split();
         index = []
         
-        for word in words:
-            if word in self.stopwords:
-                index.append(words.index(word))
-        
-        index.sort()
-        index.reverse()
-        for i in index:
-            words.pop(i)
+        purged = False
+        i = 0
+        while not purged:
+            if i>=len(words):
+                purged = True
+                continue
+            try:
+                if words[i] in self.stopwords:
+                    words.remove(words[i])
+                else:
+                    i=i+1
+            except IndexError as e:
+                error = ""
 
         return ' '.join(words)
 
@@ -316,9 +321,12 @@ class htmlAnalyzer(HTMLParser):
         #analyzer = htmlAnalyzer();
         self.urls.append(url)
     
-        for url in self.urls:
+        #for url in self.urls:
+        i=0
+        while len(self.memory)<self.MAX:
             try:
-                html = urlopen(url);
+                html = urlopen(self.urls[i]);
+                print(str(i)+"\t"+self.urls[i])
                 self.data='' # reinit data
                 self.feed(html.read().decode());
                 text = self.data.lower();
@@ -327,7 +335,7 @@ class htmlAnalyzer(HTMLParser):
                 text = text.replace("'", ' ')
                 text = self.lemmatise(text)
                 vector_tf = self.tf(text) #compute word:tf 
-                self.memory[url] = vector_tf
+                self.memory[self.urls[i]] = vector_tf
                 
             except HTTPError as e:
                 print(e);
@@ -335,15 +343,22 @@ class htmlAnalyzer(HTMLParser):
                 print(ee);
             except UnicodeDecodeError as eee:
                 print(eee)
+                #self.urls.remove(self.urls[i])
+            except UnicodeEncodeError as uee:
+                print(uee)
+                #self.urls.remove(self.urls[i])
+            except IndexError as ie:
+                i = 10*self.MAX
             #except:
             #    print("unknown error");
+            i=i+1
+        print(len(self.memory))
 
-        print("*******************")
-        exit()
         #compute tf_idf
         for uri in self.memory:
+            print("tf.idf\t"+uri)
             vector_idf = self.idf(self.memory[uri])
-            tfidf = tfidf(self.memory[uri], vector_idf)
+            tfidf = self.tfidf(self.memory[uri], vector_idf)
             self.memory[uri]=tfidf
 
 ############################################################
