@@ -15,10 +15,11 @@ from math import log10, sqrt
 from urllib import robotparser
 from urllib.parse import urlparse
 from http.server import HTTPServer, BaseHTTPRequestHandler
+import getopt, sys   
 import treetaggerwrapper
 
 
-class htmlAnalyzer(HTMLParser, BaseHTTPRequestHandler):
+class htmlAnalyzer(HTMLParser):
     def __init__(self):
         HTMLParser.__init__(self);
         
@@ -332,14 +333,13 @@ class htmlAnalyzer(HTMLParser, BaseHTTPRequestHandler):
         first_links=[] # links ordered by salton cosine
         second_links=[] # links ordered by pagerank
 
-        #read file
         f = open("db", "r")
         self.memory=eval(f.read())
         f.close()
         f = open("pr","r")
         self.pages=eval(f.read())
         f.close()
-
+        
         request = request.lower()
         request= self.remove_symbols(request);
         request = self.remove_stopwords(request);
@@ -378,16 +378,75 @@ class htmlAnalyzer(HTMLParser, BaseHTTPRequestHandler):
         second_links.sort(reverse=True)
         
         return first_links+second_links
+
+class BotHandler(BaseHTTPRequestHandler):
     
-    def serve(self):
-        """
-        launch the server
-        """
+    def do_GET(self):
+        print(self.requestline)
+        index = self.requestline.find('?req=')
+        if index>=0:
+            req=self.requestline.split(' ')[1]
+            head, sep, tail = req.partition("=")
+            req = tail.replace('+'," ")
+            h = htmlAnalyzer()
+            resp = h.handle_request(req)
+            
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+                
+            self.wfile.write(b'<html>'
+                              b' <title>Moteur de recherche</title>'
+                              b' <body>'
+                               b' <form method=GET action="">'
+                               b' Recherche:<br>'
+                               b' <input type="text" name="req">'
+                               b' <input type="submit">'
+                               b' </fom><br>')
+
+            for r in resp: 
+                
+                self.wfile.write(b'<a href='+bytes(r[1], "utf-8")+b">"
+                        +bytes(r[1],"utf-8")+b"</a><br>")
+            self.wfile.write(b'</body></html>')
+
+        else:
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+            self.wfile.write(b'<html>'
+                              b' <title>Moteur de recherche</title>'
+                              b' <body>'
+                               b' <form method=GET action="">'
+                               b' Recherche:<br>'
+                               b' <input type="text" name="req">'
+                               b' <input type="submit">'
+                               b' </fom>'
+                               b' </body>'
+                               b' </html>')
+        
+if __name__=="__main__":
+
+    try:
+        opts, args=getopt.getopt(sys.argv[1:],'sc')
+    except getopt.GetoptError as e:
+        print(e)
+
         #read file
-        f = open("db", "r")
-        self.memory=eval(f.read())
-        f.close()
-        f = open("pr","r")
-        self.pages=eval(f.read())
-        f.close()
+    #f = open("db", "r")
+    #h.memory=eval(f.read())
+    #f.close()
+    #f = open("pr","r")
+    #h.pages=eval(f.read())
+    #f.close()
+    for o in opts:
+        if o[0]=="-s":
+            PORT=8000
+            server=HTTPServer(('',PORT), BotHandler)
+            print("starting server on port "+str(PORT))
+            server.serve_forever()
+        elif o[0]=="-c":
+            h = htmlAnalyzer()
+            h.crawl()
+
 
