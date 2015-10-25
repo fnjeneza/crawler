@@ -12,7 +12,6 @@ from urllib.request import urlopen
 from urllib.error import HTTPError, URLError
 from html.parser import HTMLParser
 from math import log10, sqrt, pow
-import sqlite3
 import treetaggerwrapper
 
 
@@ -20,17 +19,11 @@ class htmlAnalyzer(HTMLParser):
     def __init__(self):
         HTMLParser.__init__(self);
         
-        #print("Init...",end="\r");
-        #count URIs
-        self.counter = 0;
         self.data=""
-        self.MAX=10 #Max pages
+        self.MAX=100 #Max pages
         self.memory = {} #uri, vector and tf.idf
         self.urls=[] #urls list
 
-        #create database
-        self.db = sqlite3.connect("crawler.db");
-        self.cursor = self.db.cursor();
         self.is_script=False
         self.is_style=False
         self.stopwords=[] #stop words list
@@ -40,31 +33,6 @@ class htmlAnalyzer(HTMLParser):
             for word in stopwords:
                 self.stopwords.append(word.strip())
 
-    def reset_db(self):
-        """
-        reset db
-        """
-        #init table
-        self.cursor.execute("DROP TABLE IF ExISTS crawl_tb");
-        self.cursor.execute('''CREATE TABLE crawl_tb (id integer primary key autoincrement,
-                                                    uri text unique,
-                                                    vector text,
-                                                    tfidf text)''');
-        
-    
-    def addUri(self, uri):
-        """
-        add Uri in the db
-        """
-        if not self.isUrlOK(uri):
-            return
-        try:
-            self.cursor.execute("INSERT INTO crawl_tb(uri) VALUES(?)",[uri]);
-            self.counter+=1;
-            #print("link\t"+str(self.counter)+"\t"+uri);
-        except sqlite3.IntegrityError:
-            error ="already added";
-    
     def lemmatise(self, text):
         """
         lemmatise a text
@@ -77,16 +45,6 @@ class htmlAnalyzer(HTMLParser):
             lemma_list.append(tag.lemma)
         return ' '.join(lemma_list)
 
-
-    def vector(self, text, pk_id):
-        """
-        save vector in db.
-        The vector must be without punctuations and each word separate 
-        by space
-        The vector is a simple text, which will be split before use
-        pk_id is the primary key id
-        """
-        self.cursor.execute("UPDATE crawl_tb SET vector=? WHERE id=?",[text, pk_id]);
 
     def tf(self, text):
         """
@@ -111,14 +69,12 @@ class htmlAnalyzer(HTMLParser):
         compute idf of text
         return a dict {word:idf}
         """
-        if vector==str:
-            vector = text.split()
 
         vector_idf={}
 
         D = len(self.memory) #total number of documents in the corpus
         for word in vector:
-            di=0 #number of the documents where the term word appears
+            di=0 #number of documents where the word appears
             for uri in self.memory:
                 if word in self.memory[uri]:
                     di+=1
@@ -144,8 +100,8 @@ class htmlAnalyzer(HTMLParser):
             vector_tfidf[word] = vector_tf[word]*vector_idf[word]
 
         return vector_tfidf
-    
-    def handle_request(self, request, tfidf_request):
+    """
+    def handle_request(self, request):
         """
         Handle a user request
         : request: list
@@ -154,39 +110,52 @@ class htmlAnalyzer(HTMLParser):
         incr=0
         cond=""
         responses=[] # list  [salton cosinus, url]
-        links=[] # list of urls to return 
-        for value in request:
-            if incr==0:
-                cond = "'%"+value+"%'"
-            else:
-                cond =cond+" OR vector LIKE '%"+value+"%'"
-            incr+=1
+        first_links=[] # links ordered by salton cosine
+        second_links=[] # links ordered by pagerank
 
-        self.cursor.execute("SELECT uri,vector, tfidf FROM crawl_tb WHERE vector LIKE "+cond)
-        results = self.cursor.fetchall()
-        tfidf_vector=[] #tfidf of the returned vector
-        for result in results:
-            url = result[0]
-            vector = result[1].split();
-            tfidf = result[2].split();
-            for word in request:
-                try:
-                    index = vector.index(word)
-                    tfidf_vector.append(float(tfidf[index]))
-                except ValueError:
-                    tfidf_vector.append(0)
-            #calculate similarity
-            similarity = self.similarity(tfidf_request, tfidf_vector)
-            responses.append([similarity,url]) # append an url
-            tfidf_vector.clear()
+        #read file
+        f = open("db", "r")
+        self.memory=eval(f.read())
+        f.close()
+
+        request = request.lower()
+        request= self.remove_symbols(request);
+        request = self.remove_stopwords(request);
+        request = request.replace("'", ' ')
+        request = self.lemmatise(request)
+        vector_tf = self.tf(request)
+        vector_idf = self.idf(vector_tf)
+        vector_req = self.tfidf(vector_tf, vector_idf)
         
-        responses.sort(reverse=True) #sort result by salton cosine
+        tfidf_req = []
+        for v in vector_req:
+            tfidf_req.append(vector_req[v])
+
+        for url in self.memory:
+            words = self.memory[url] #all words of a page
+            tfidf=[] #tf.idf returned
+            nb_terms = 0
+            for term in vector_req:
+                if term in words:
+                    tfidf.append(words[term])
+                    nb_terms+=1
+                else:
+                    tfidf.append(0)
+            if nb_terms==len(vector_req):
+                """
+                use salton cosine
+                """
+                first_links.append([self.similarity(tfidf_req, tfidf), url])
+            elif nb_terms!=0:
+                """
+                use pagerank
+                """
+                todo = "todo"
         
-        for response in responses:
-            links.append(response[1]) # links to return
-
-        return links
-
+        first_links.sort(reverse=True)
+        
+        return first_links
+    """
     def similarity(self, vector1, vector2):
         """
         cosinus de salton
@@ -240,37 +209,21 @@ class htmlAnalyzer(HTMLParser):
 
         return ' '.join(words)
 
-    
-    def isUrlOK(self, url):
-        """Check if url is alive"""
-        try:
-            response = urlopen(url)
-            if response.geturl().find("softpedia.com") <0 :
-                    return False
-        except URLError as e:
-            return False;
-        code = response.getcode()
-        codes = {200,301,302}
-        if code not in codes:
-            return False;
-        return True;
-
     def handle_starttag(self, tag, attrs):
         #Recherche des liens
-        if self.counter<self.MAX:
-            if tag=="script":
-                self.is_script=True
+        if tag=="script":
+            self.is_script=True
 
-            if tag=="style":
-                self.is_style=True
+        if tag=="style":
+            self.is_style=True
 
-            if(tag == "a"):
-                for attr in attrs:
-                    if(attr[0] == "href"):
-                        href = attr[1];
-                        if href.find("http")>=0 and href.find("ubuntu.com")>=0:
-                            if href not in self.urls:
-                                self.urls.append(href)
+        if(tag == "a"):
+            for attr in attrs:
+                if(attr[0] == "href"):
+                    href = attr[1];
+                    if href.find("http")>=0 and href.find("ubuntu.com")>=0:
+                        if href not in self.urls:
+                            self.urls.append(href)
   
     def handle_endtag(self, tag):
         if tag=="script":
@@ -335,52 +288,56 @@ class htmlAnalyzer(HTMLParser):
         f = open("db", "w")
         f.write(str(self.memory))
         f.close()
-############################################################
-"""
-reset_db = False
-url = "http://news.softpedia.com/cat/Linux/";
-analyzer = htmlAnalyzer();
 
-if reset_db:
-    analyzer.reset_db()
+    def handle_request(self, request):
+        """
+        Handle a user request
+        : request: list
+        : links: list 
+        """
+        responses=[] # list  [salton cosinus, url]
+        first_links=[] # links ordered by salton cosine
+        second_links=[] # links ordered by pagerank
 
-analyzer.addUri(url);
+        #read file
+        f = open("db", "r")
+        self.memory=eval(f.read())
+        f.close()
 
-iterator=1;
-while (iterator<=analyzer.MAX):
-    url = analyzer.getUri(iterator);
+        request = request.lower()
+        request= self.remove_symbols(request);
+        request = self.remove_stopwords(request);
+        request = request.replace("'", ' ')
+        request = self.lemmatise(request)
+        vector_tf = self.tf(request)
+        vector_idf = self.idf(vector_tf)
+        vector_req = self.tfidf(vector_tf, vector_idf)
+        
+        tfidf_req = []
+        for v in vector_req:
+            tfidf_req.append(vector_req[v])
 
-    #Retrieve an html page
-    print("Crawl:\t"+str(iterator)+"\t"+url)
-    try:
-        html = urlopen(url);
-        analyzer.data='' # reinit data
-        analyzer.feed(html.read().decode());
-        text = analyzer.data.lower();
-        text = analyzer.remove_symbols(text);
-        text = analyzer.remove_stopwords(text);
-        text = ' '.join(analyzer.lemmatise(text))
-        analyzer.vector(text, iterator) #save vector in db
-
-        #commit changes to the db
-        analyzer.db.commit()
-    except HTTPError as e:
-        print(e);
-    except URLError as ee:
-        print(ee);
-    #except:
-    #    print("unknown error");
-
-    iterator+=1;
-
-#tf_idf
-for index in range(1,analyzer.MAX+1):
-    analyzer.tfidf(index)
-    analyzer.db.commit()
-
-
-#close all opened db or cursor
-analyzer.cursor.close();
-analyzer.db.close();
-"""
-######################################################
+        for url in self.memory:
+            words = self.memory[url] #all words of a page
+            tfidf=[] #tf.idf returned
+            nb_terms = 0
+            for term in vector_req:
+                if term in words:
+                    tfidf.append(words[term])
+                    nb_terms+=1
+                else:
+                    tfidf.append(0)
+            if nb_terms==len(vector_req):
+                """
+                use salton cosine
+                """
+                first_links.append([self.similarity(tfidf_req, tfidf), url])
+            elif nb_terms!=0:
+                """
+                use pagerank
+                """
+                todo = "todo"
+        
+        first_links.sort(reverse=True)
+        
+        return first_links
