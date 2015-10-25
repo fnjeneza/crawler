@@ -12,6 +12,8 @@ from urllib.request import urlopen
 from urllib.error import HTTPError, URLError
 from html.parser import HTMLParser
 from math import log10, sqrt
+from urllib import robotparser
+from urllib.parse import urlparse
 import treetaggerwrapper
 
 
@@ -34,6 +36,17 @@ class htmlAnalyzer(HTMLParser):
         with open("stopwords.txt") as stopwords:
             for word in stopwords:
                 self.stopwords.append(word.strip())
+    
+    def iscrawlallowed(self,url):
+        """
+        check robots.txt
+        """
+        parser=urlparse(url)
+        path = parser.scheme+"://"+parser.hostname+"/robots.txt"
+        robot = robotparser.RobotFileParser()
+        robot.set_url(path)
+        robot.read()
+        return robot.can_fetch('*', url)
 
     def lemmatise(self, text):
         """
@@ -199,17 +212,20 @@ class htmlAnalyzer(HTMLParser):
                 self.data = self.data+' '+data.strip();
 
 
-    def crawl(self, url):
+    def crawl(self):
         """
         crawl a site
         """
     
         #analyzer = htmlAnalyzer();
-        self.urls.append(url)
-    
-        #for url in self.urls:
+        self.urls.append("http://www.ubuntu.com/")
+        
+        i=0
         while len(self.memory)<=self.MAX:
             try:
+                if not self.iscrawlallowed(self.urls[i]):
+                    continue
+
                 html = urlopen(self.urls[i]);
                 print("...\t"+self.urls[i])
                 self.data='' # clear data
@@ -229,12 +245,8 @@ class htmlAnalyzer(HTMLParser):
                 print(ee);
             except UnicodeDecodeError as eee:
                 print(eee)
-                #self.urls.remove(self.urls[i])
             except UnicodeEncodeError as uee:
                 print(uee)
-                #self.urls.remove(self.urls[i])
-            except IndexError as ie:
-                i = 10*self.MAX
             #except:
             #    print("unknown error");
             i=i+1
