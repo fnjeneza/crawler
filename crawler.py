@@ -24,7 +24,7 @@ class htmlAnalyzer(HTMLParser):
         #count URIs
         self.counter = 0;
         self.data=""
-        self.MAX=1000 #Max pages
+        self.MAX=10 #Max pages
         self.memory = {} #uri, vector and tf.idf
         self.urls=[] #urls list
 
@@ -77,20 +77,6 @@ class htmlAnalyzer(HTMLParser):
             lemma_list.append(tag.lemma)
         return ' '.join(lemma_list)
 
-    def getUri(self, iterator):
-        """
-        return Uri where id=iterator
-        """
-        self.cursor.execute("SELECT uri FROM crawl_tb WHERE id=?",[iterator]);
-        return self.cursor.fetchone()[0];
-        
-    
-    def getTotal(self):
-        """
-        Total links in db
-        """
-        self.cursor.execute("SELECT COUNT(uri) FROM crawl_tb");
-        return self.cursor.fetchone()[0];
 
     def vector(self, text, pk_id):
         """
@@ -231,21 +217,6 @@ class htmlAnalyzer(HTMLParser):
             text = text.replace(symbol,' ');
         return text;
     
-    def remove_duplicated(self, text):
-        """
-        remove all duplicated word
-        return list
-        """
-        optimised=[]
-        if type(text)==str:
-            text = text.split()
-
-        for word in text:
-            if word not in optimised:
-                optimised.append(word)
-
-        return optimised
-
     def remove_stopwords(self,text):
         """
         Remove stopwords from text
@@ -323,11 +294,11 @@ class htmlAnalyzer(HTMLParser):
     
         #for url in self.urls:
         i=0
-        while len(self.memory)<self.MAX:
+        while len(self.memory)<=self.MAX:
             try:
                 html = urlopen(self.urls[i]);
                 print(str(i)+"\t"+self.urls[i])
-                self.data='' # reinit data
+                self.data='' # clear data
                 self.feed(html.read().decode());
                 text = self.data.lower();
                 text = self.remove_symbols(text);
@@ -360,7 +331,10 @@ class htmlAnalyzer(HTMLParser):
             vector_idf = self.idf(self.memory[uri])
             tfidf = self.tfidf(self.memory[uri], vector_idf)
             self.memory[uri]=tfidf
-
+        
+        f = open("crawl.out", "w")
+        f.write(str(self.memory))
+        f.close()
 ############################################################
 """
 reset_db = False
