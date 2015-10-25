@@ -22,16 +22,20 @@ class htmlAnalyzer(HTMLParser):
         HTMLParser.__init__(self);
         
         self.data=""
-        self.MAX=100 #Max pages
+        self.MAX=5 #Max pages
         self.memory = {} #uri, vector and tf.idf
         self.urls=[] #urls list
-            
+        self.pages={}
+        self.citations=[]
+
         self.is_script=False
         self.is_style=False
         self.factor=1 #for duplicating data
         self.ignore=False
         self.stopwords=[] #stop words list
         
+        self.tag = {"title":12, "h1":10, "h2":8, "h3":6, "h4":4}
+
         #loading stop words
         with open("stopwords.txt") as stopwords:
             for word in stopwords:
@@ -59,6 +63,20 @@ class htmlAnalyzer(HTMLParser):
         for tag in mytags:
             lemma_list.append(tag.lemma)
         return ' '.join(lemma_list)
+
+    
+    def pagerank(self):
+        """
+        compute pagerank
+        """
+        for url in self.pages:
+            d = 0.85
+            PR_N=0
+            for u in self.pages[url]["urls"]:
+                PR = self.pages[u]["pagerank"]
+                N = self.pages[u]["urls"]
+                PR_N=PR_N+PR/N
+            self.pages[url]["pagerank"]=(1-d)+d*PR_N
 
 
     def tf(self, text):
@@ -168,18 +186,17 @@ class htmlAnalyzer(HTMLParser):
                 error = ""
 
         return ' '.join(words)
-
+    
     def handle_starttag(self, tag, attrs):
         #Recherche des liens
-        title = {"title":12, "h1":10, "h2":8, "h3":6, "h4":4}
         if tag=="script":
             self.is_script=True
 
         elif tag=="style":
             self.is_style=True
 
-        elif tag in title:
-            self.factor=title[tag]
+        elif tag in self.tag:
+            self.factor=self.tag[tag]
 
         elif tag == "footer":
             self.ignore=True
@@ -191,16 +208,16 @@ class htmlAnalyzer(HTMLParser):
                     if href.find("http")>=0 and href.find("ubuntu.com")>=0:
                         if href not in self.urls:
                             self.urls.append(href)
+                            self.citations.append(href)
   
     def handle_endtag(self, tag):
-        title = ["title", "h1", "h2", "h3"]
         if tag=="script":
             self.is_script=False
 
         elif tag=="style":
             self.is_style=False
 
-        elif tag in title:
+        elif tag in self.tag:
             self.factor = 1
 
         elif tag == "footer":
@@ -238,6 +255,10 @@ class htmlAnalyzer(HTMLParser):
                 text = self.lemmatise(text)
                 vector_tf = self.tf(text) #compute word:tf 
                 self.memory[self.urls[i]] = vector_tf
+
+                self.pages[self.urls[i]]={"pagerank":1, 
+                        "urls":list(self.citations)}
+                self.citations.clear()
                 
             except HTTPError as e:
                 print(e);
@@ -259,9 +280,18 @@ class htmlAnalyzer(HTMLParser):
             tfidf = self.tfidf(self.memory[uri], vector_idf)
             self.memory[uri]=tfidf
         
+        #compute pagerank
+        for i in range(90):
+            self.pagerank()
+
         f = open("db", "w")
         f.write(str(self.memory))
         f.close()
+        
+        f = open("pr", "w")
+        f.write(str(self.pages))
+        f.close()
+
 
     def handle_request(self, request):
         """
@@ -310,8 +340,9 @@ class htmlAnalyzer(HTMLParser):
                 """
                 use pagerank
                 """
-                todo = "todo"
+                second_links.append([self.pages[url]["pagerank"], url])
         
         first_links.sort(reverse=True)
+        second_links.sort(reverse=True)
         
-        return first_links
+        return first_links+second_links
