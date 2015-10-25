@@ -11,7 +11,7 @@
 from urllib.request import urlopen
 from urllib.error import HTTPError, URLError
 from html.parser import HTMLParser
-from math import log10, sqrt, pow
+from math import log10, sqrt
 import treetaggerwrapper
 
 
@@ -23,9 +23,11 @@ class htmlAnalyzer(HTMLParser):
         self.MAX=100 #Max pages
         self.memory = {} #uri, vector and tf.idf
         self.urls=[] #urls list
-
+            
         self.is_script=False
         self.is_style=False
+        self.factor=1 #for duplicating data
+        self.ignore=False
         self.stopwords=[] #stop words list
         
         #loading stop words
@@ -100,62 +102,7 @@ class htmlAnalyzer(HTMLParser):
             vector_tfidf[word] = vector_tf[word]*vector_idf[word]
 
         return vector_tfidf
-    """
-    def handle_request(self, request):
-        """
-        Handle a user request
-        : request: list
-        : links: list 
-        """
-        incr=0
-        cond=""
-        responses=[] # list  [salton cosinus, url]
-        first_links=[] # links ordered by salton cosine
-        second_links=[] # links ordered by pagerank
-
-        #read file
-        f = open("db", "r")
-        self.memory=eval(f.read())
-        f.close()
-
-        request = request.lower()
-        request= self.remove_symbols(request);
-        request = self.remove_stopwords(request);
-        request = request.replace("'", ' ')
-        request = self.lemmatise(request)
-        vector_tf = self.tf(request)
-        vector_idf = self.idf(vector_tf)
-        vector_req = self.tfidf(vector_tf, vector_idf)
-        
-        tfidf_req = []
-        for v in vector_req:
-            tfidf_req.append(vector_req[v])
-
-        for url in self.memory:
-            words = self.memory[url] #all words of a page
-            tfidf=[] #tf.idf returned
-            nb_terms = 0
-            for term in vector_req:
-                if term in words:
-                    tfidf.append(words[term])
-                    nb_terms+=1
-                else:
-                    tfidf.append(0)
-            if nb_terms==len(vector_req):
-                """
-                use salton cosine
-                """
-                first_links.append([self.similarity(tfidf_req, tfidf), url])
-            elif nb_terms!=0:
-                """
-                use pagerank
-                """
-                todo = "todo"
-        
-        first_links.sort(reverse=True)
-        
-        return first_links
-    """
+    
     def similarity(self, vector1, vector2):
         """
         cosinus de salton
@@ -211,13 +158,20 @@ class htmlAnalyzer(HTMLParser):
 
     def handle_starttag(self, tag, attrs):
         #Recherche des liens
+        title = {"title":12, "h1":10, "h2":8, "h3":6, "h4":4}
         if tag=="script":
             self.is_script=True
 
-        if tag=="style":
+        elif tag=="style":
             self.is_style=True
 
-        if(tag == "a"):
+        elif tag in title:
+            self.factor=title[tag]
+
+        elif tag == "footer":
+            self.ignore=True
+
+        elif(tag == "a"):
             for attr in attrs:
                 if(attr[0] == "href"):
                     href = attr[1];
@@ -226,15 +180,23 @@ class htmlAnalyzer(HTMLParser):
                             self.urls.append(href)
   
     def handle_endtag(self, tag):
+        title = ["title", "h1", "h2", "h3"]
         if tag=="script":
             self.is_script=False
 
-        if tag=="style":
+        elif tag=="style":
             self.is_style=False
 
+        elif tag in title:
+            self.factor = 1
+
+        elif tag == "footer":
+            self.ignore=False
+
     def handle_data(self, data):
-        if not self.is_script and not self.is_style:
-            self.data = self.data+' '+data.strip();
+        if not self.is_script and not self.is_style and not self.ignore:
+            for f in range(self.factor):
+                self.data = self.data+' '+data.strip();
 
 
     def crawl(self, url):
@@ -246,12 +208,12 @@ class htmlAnalyzer(HTMLParser):
         self.urls.append(url)
     
         #for url in self.urls:
-        i=0
         while len(self.memory)<=self.MAX:
             try:
                 html = urlopen(self.urls[i]);
-                print(str(i)+"\t"+self.urls[i])
+                print("...\t"+self.urls[i])
                 self.data='' # clear data
+                self.ignore=False 
                 self.feed(html.read().decode());
                 text = self.data.lower();
                 text = self.remove_symbols(text);
@@ -295,7 +257,7 @@ class htmlAnalyzer(HTMLParser):
         : request: list
         : links: list 
         """
-        responses=[] # list  [salton cosinus, url]
+        #responses=[] # list  [salton cosinus, url]
         first_links=[] # links ordered by salton cosine
         second_links=[] # links ordered by pagerank
 
