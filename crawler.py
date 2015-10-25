@@ -332,7 +332,7 @@ class htmlAnalyzer(HTMLParser):
             tfidf = self.tfidf(self.memory[uri], vector_idf)
             self.memory[uri]=tfidf
         
-        f = open("crawl.out", "w")
+        f = open("db", "w")
         f.write(str(self.memory))
         f.close()
 ############################################################
