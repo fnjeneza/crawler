@@ -14,15 +14,16 @@ from html.parser import HTMLParser
 from math import log10, sqrt
 from urllib import robotparser
 from urllib.parse import urlparse
+from http.server import HTTPServer, BaseHTTPRequestHandler
 import treetaggerwrapper
 
 
-class htmlAnalyzer(HTMLParser):
+class htmlAnalyzer(HTMLParser, BaseHTTPRequestHandler):
     def __init__(self):
         HTMLParser.__init__(self);
         
         self.data=""
-        self.MAX=5 #Max pages
+        self.MAX=1000 #Max pages
         self.memory = {} #uri, vector and tf.idf
         self.urls=[] #urls list
         self.pages={}
@@ -46,7 +47,20 @@ class htmlAnalyzer(HTMLParser):
         check robots.txt
         """
         parser=urlparse(url)
-        path = parser.scheme+"://"+parser.hostname+"/robots.txt"
+        host=parser.hostname
+        try:
+            if host.find("ubuntu.com")<0:
+                return False
+            if host in ["lists.ubuntu.com","people.ubuntu.com",
+                    "cloud-images.ubuntu.com", "cdimage.ubuntu.com",
+                    "releases.ubuntu.com"]:
+                return False
+
+            path = parser.scheme+"://"+host+"/robots.txt"
+        except TypeError:
+            return False
+        except AttributeError:
+            return False
         robot = robotparser.RobotFileParser()
         robot.set_url(path)
         robot.read()
@@ -69,13 +83,21 @@ class htmlAnalyzer(HTMLParser):
         """
         compute pagerank
         """
-        for url in self.pages:
+        for url in self.memory:
             d = 0.85
             PR_N=0
+            print("pagerank:\t"+url)
             for u in self.pages[url]["urls"]:
-                PR = self.pages[u]["pagerank"]
-                N = self.pages[u]["urls"]
-                PR_N=PR_N+PR/N
+                PR=0
+                N=1
+                try:
+                    PR = self.pages[u]["pagerank"]
+                    N = len(self.pages[u]["urls"])
+                    if N==0:
+                        N=1
+                except KeyError:
+                    error=""
+                PR_N=PR_N+(PR/N)
             self.pages[url]["pagerank"]=(1-d)+d*PR_N
 
 
@@ -205,7 +227,13 @@ class htmlAnalyzer(HTMLParser):
             for attr in attrs:
                 if(attr[0] == "href"):
                     href = attr[1];
-                    if href.find("http")>=0 and href.find("ubuntu.com")>=0:
+                    if href.find("http")>=0:
+                        #parser = urlparse(href)
+                        #try:
+                        #    if parser.hostname.find('ubuntu.com')<0:
+                        #        return
+                        #except AttributeError:
+                        #    return
                         if href not in self.urls:
                             self.urls.append(href)
                             self.citations.append(href)
@@ -241,10 +269,11 @@ class htmlAnalyzer(HTMLParser):
         while len(self.memory)<=self.MAX:
             try:
                 if not self.iscrawlallowed(self.urls[i]):
+                    i+=1
                     continue
 
                 html = urlopen(self.urls[i]);
-                print("...\t"+self.urls[i])
+                print(str(len(self.memory))+"...\t"+self.urls[i])
                 self.data='' # clear data
                 self.ignore=False 
                 self.feed(html.read().decode());
@@ -307,6 +336,9 @@ class htmlAnalyzer(HTMLParser):
         f = open("db", "r")
         self.memory=eval(f.read())
         f.close()
+        f = open("pr","r")
+        self.pages=eval(f.read())
+        f.close()
 
         request = request.lower()
         request= self.remove_symbols(request);
@@ -346,3 +378,16 @@ class htmlAnalyzer(HTMLParser):
         second_links.sort(reverse=True)
         
         return first_links+second_links
+    
+    def serve(self):
+        """
+        launch the server
+        """
+        #read file
+        f = open("db", "r")
+        self.memory=eval(f.read())
+        f.close()
+        f = open("pr","r")
+        self.pages=eval(f.read())
+        f.close()
+
